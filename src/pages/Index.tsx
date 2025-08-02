@@ -1,13 +1,51 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from 'react';
+import { AppSidebar } from '@/components/AppSidebar';
+import { KanbanBoard } from '@/components/KanbanBoard';
+import { CustomersPage } from '@/components/CustomersPage';
+import { Dashboard } from '@/components/Dashboard';
+import { AllOrders } from '@/components/AllOrders';
+import { AgentManagement } from '@/components/AgentManagement';
+import { KemiSettings } from '@/components/KemiSettings';
+import { Reports } from '@/components/Reports';
+import { Notifications } from '@/components/Notifications';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 const Index = () => {
+  const [activeSection, setActiveSection] = useState('kanban');
+
+  const renderActiveSection = () => {
+    switch (activeSection) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'orders':
+        return <AllOrders />;
+      case 'kanban':
+        return <KanbanBoard />;
+      case 'customers':
+        return <CustomersPage />;
+      case 'agents':
+        return <AgentManagement />;
+      case 'kemi':
+        return <KemiSettings />;
+      case 'reports':
+        return <Reports />;
+      case 'notifications':
+        return <Notifications />;
+      default:
+        return <KanbanBoard />;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-slate-50">
+        <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        <main className="flex-1 overflow-hidden">
+          {renderActiveSection()}
+        </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
