@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight, Clock, AlertTriangle, CheckCircle, XCircle, User, Bot } from 'lucide-react';
+import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight, Clock, AlertTriangle, CheckCircle, XCircle, User, Bot, CreditCard, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrderModal } from '@/components/OrderModal';
@@ -21,22 +21,28 @@ interface Order {
   labels: string[];
   state: string;
   abandonmentCount: number;
-  assignmentTime: number; // seconds since assignment
+  repeatCount: number;
+  assignmentTime: number;
   chatStatus: 'sending' | 'sent' | 'failed' | 'reply' | 'blocked';
   assignmentReason: string;
   telesalesAssigned: boolean;
+  prepaymentRequired: boolean;
+  prepaymentStatus: 'pending' | 'sent' | 'confirmed' | 'none';
+  recoveryMode: boolean;
+  recoveryOrdersCompleted: number;
 }
 
 const columns = [
-  { id: 'received', title: 'Order Received', color: 'bg-blue-50 border-blue-200', count: 12 },
-  { id: 'telesales', title: 'Assigned to TeleSales', color: 'bg-orange-50 border-orange-200', count: 8 },
-  { id: 'delivery', title: 'Assigned to Delivery Agent', color: 'bg-purple-50 border-purple-200', count: 15 },
-  { id: 'payment', title: 'Payment Received', color: 'bg-green-50 border-green-200', count: 23 },
-  { id: 'delivered', title: 'Order Delivered', color: 'bg-emerald-50 border-emerald-200', count: 45 },
-  { id: 'cancelled', title: 'Order Cancelled', color: 'bg-red-50 border-red-200', count: 3 },
+  { id: 'received', title: 'Order Received', color: 'bg-blue-50 border-blue-200', count: 15 },
+  { id: 'telesales', title: 'Assigned to TeleSales', color: 'bg-orange-50 border-orange-200', count: 12 },
+  { id: 'delivery', title: 'Assigned to Delivery Agent', color: 'bg-purple-50 border-purple-200', count: 18 },
+  { id: 'payment', title: 'Payment Received', color: 'bg-green-50 border-green-200', count: 28 },
+  { id: 'delivered', title: 'Order Delivered', color: 'bg-emerald-50 border-emerald-200', count: 52 },
+  { id: 'cancelled', title: 'Order Cancelled', color: 'bg-red-50 border-red-200', count: 4 },
 ];
 
 const sampleOrders: Order[] = [
+  // EXTREME RISK - Requesting Prepayment
   {
     id: '1',
     customerName: 'Adebayo Johnson',
@@ -51,14 +57,72 @@ const sampleOrders: Order[] = [
     status: 'received',
     labels: ['extreme-risk'],
     state: 'Lagos State',
-    abandonmentCount: 3,
-    assignmentTime: 35,
-    chatStatus: 'blocked',
-    assignmentReason: 'Manual review required',
-    telesalesAssigned: false
+    abandonmentCount: 4,
+    repeatCount: 0,
+    assignmentTime: 45,
+    chatStatus: 'sent',
+    assignmentReason: 'Prepayment request sent',
+    telesalesAssigned: false,
+    prepaymentRequired: true,
+    prepaymentStatus: 'sent',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
   },
+  // EXTREME RISK - In Recovery Mode (REPEAT¹)
   {
     id: '2',
+    customerName: 'Funmi Adebayo',
+    phone: '+234 805 234 5678',
+    amount: 28500,
+    product: 'Beauty Bundle',
+    quantity: 1,
+    source: 'Instagram',
+    agent: 'David',
+    agentRating: 4.9,
+    time: '10:30 AM',
+    status: 'telesales',
+    labels: ['extreme-risk', 'recovery', 'prepaid'],
+    state: 'Ogun State',
+    abandonmentCount: 3,
+    repeatCount: 1,
+    assignmentTime: 15,
+    chatStatus: 'sent',
+    assignmentReason: 'RISK³ customer - payment confirmed',
+    telesalesAssigned: true,
+    prepaymentRequired: true,
+    prepaymentStatus: 'confirmed',
+    recoveryMode: true,
+    recoveryOrdersCompleted: 1
+  },
+  // RISK³ Customer Near Recovery (REPEAT³)
+  {
+    id: '3',
+    customerName: 'Grace Okonkwo',
+    phone: '+234 807 345 6789',
+    amount: 45000,
+    product: 'Premium Kit',
+    quantity: 1,
+    source: 'WhatsApp',
+    agent: 'Sarah',
+    agentRating: 4.7,
+    time: '09:45 AM',
+    status: 'telesales',
+    labels: ['extreme-risk', 'recovery', 'prepaid', 'final-recovery'],
+    state: 'Anambra State',
+    abandonmentCount: 3,
+    repeatCount: 3,
+    assignmentTime: 22,
+    chatStatus: 'sent',
+    assignmentReason: 'RISK³ recovery - final recovery order',
+    telesalesAssigned: true,
+    prepaymentRequired: true,
+    prepaymentStatus: 'confirmed',
+    recoveryMode: true,
+    recoveryOrdersCompleted: 3
+  },
+  // HIGH RISK with REPEAT
+  {
+    id: '4',
     customerName: 'Fatima Abubakar',
     phone: '+234 806 123 4567',
     amount: 66750,
@@ -72,13 +136,19 @@ const sampleOrders: Order[] = [
     labels: ['high-risk', 'repeat'],
     state: 'Abuja FCT',
     abandonmentCount: 2,
+    repeatCount: 3,
     assignmentTime: 18,
     chatStatus: 'sent',
     assignmentReason: 'High-value + beauty expertise',
-    telesalesAssigned: true
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
   },
+  // CAUTION with Hot label
   {
-    id: '3',
+    id: '5',
     customerName: 'Kemi Ibadan',
     phone: '+234 801 234 5678',
     amount: 45000,
@@ -92,13 +162,45 @@ const sampleOrders: Order[] = [
     labels: ['caution', 'hot'],
     state: 'Ogun State',
     abandonmentCount: 1,
+    repeatCount: 0,
     assignmentTime: 12,
     chatStatus: 'sent',
     assignmentReason: 'Available + new customer focus',
-    telesalesAssigned: true
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
   },
+  // TRUSTED REPEAT Customer
   {
-    id: '4',
+    id: '6',
+    customerName: 'Mrs. Chioma Okeke',
+    phone: '+234 803 567 8901',
+    amount: 85000,
+    product: 'Complete Beauty Set',
+    quantity: 1,
+    source: 'WhatsApp',
+    agent: 'Mike',
+    agentRating: 4.8,
+    time: '08:45 AM',
+    status: 'delivery',
+    labels: ['trusted', 'repeat', 'vip'],
+    state: 'Enugu State',
+    abandonmentCount: 0,
+    repeatCount: 5,
+    assignmentTime: 5,
+    chatStatus: 'sent',
+    assignmentReason: 'VIP customer - priority assignment',
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
+  },
+  // TRUSTED NEW Customer
+  {
+    id: '7',
     customerName: 'Emeka Okafor',
     phone: '+234 701 987 6543',
     amount: 25000,
@@ -112,18 +214,66 @@ const sampleOrders: Order[] = [
     labels: ['trusted', 'new'],
     state: 'Rivers State',
     abandonmentCount: 0,
+    repeatCount: 0,
     assignmentTime: 8,
     chatStatus: 'sent',
     assignmentReason: 'Normal assignment',
-    telesalesAssigned: true
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
+  },
+  // Former RISK³ Customer Now TRUSTED (Recovery Complete)
+  {
+    id: '8',
+    customerName: 'Blessing Nwosu',
+    phone: '+234 806 789 0123',
+    amount: 38500,
+    product: 'Hair Care Bundle',
+    quantity: 1,
+    source: 'Instagram',
+    agent: 'David',
+    agentRating: 4.9,
+    time: '11:15 AM',
+    status: 'payment',
+    labels: ['trusted', 'repeat', 'recovered'],
+    state: 'Imo State',
+    abandonmentCount: 3,
+    repeatCount: 4,
+    assignmentTime: 6,
+    chatStatus: 'sent',
+    assignmentReason: 'Successfully recovered customer',
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 3
   }
 ];
 
-const getRiskLevel = (abandonmentCount: number) => {
-  if (abandonmentCount === 0) return { level: 'TRUSTED', icon: '✅', color: 'text-green-600 border-green-200', bgColor: 'bg-green-50' };
+const getRiskLevel = (abandonmentCount: number, repeatCount: number, recoveryMode: boolean) => {
+  if (abandonmentCount === 0) {
+    if (repeatCount > 0) {
+      return { level: 'TRUSTED', icon: '✅', color: 'text-green-600 border-green-200', bgColor: 'bg-green-50' };
+    }
+    return { level: 'TRUSTED', icon: '✅', color: 'text-green-600 border-green-200', bgColor: 'bg-green-50' };
+  }
   if (abandonmentCount === 1) return { level: 'RISK¹', icon: '⚠️', color: 'text-orange-600 border-orange-200', bgColor: 'bg-orange-50' };
   if (abandonmentCount === 2) return { level: 'RISK²', icon: '🚨', color: 'text-red-600 border-red-200', bgColor: 'bg-red-50' };
+  if (recoveryMode) {
+    return { level: 'RISK³', icon: '🔴', color: 'text-red-800 border-red-300', bgColor: 'bg-red-100' };
+  }
   return { level: 'RISK³⁺', icon: '🔴', color: 'text-red-800 border-red-300', bgColor: 'bg-red-100' };
+};
+
+const getRepeatBadge = (repeatCount: number) => {
+  if (repeatCount === 0) return null;
+  const superscript = repeatCount === 1 ? '¹' : repeatCount === 2 ? '²' : repeatCount === 3 ? '³' : `${repeatCount}⁺`;
+  return {
+    text: `REPEAT${superscript}`,
+    color: 'text-blue-600 border-blue-200 bg-blue-50'
+  };
 };
 
 const getChatStatusIcon = (status: string) => {
@@ -144,27 +294,58 @@ const getAssignmentTimerColor = (seconds: number) => {
   return 'text-red-800 animate-pulse';
 };
 
-const getActionButtons = (order: Order) => {
-  const risk = getRiskLevel(order.abandonmentCount);
+const getPrepaymentStatus = (order: Order) => {
+  if (!order.prepaymentRequired) return null;
   
-  if (order.abandonmentCount >= 3) {
+  switch (order.prepaymentStatus) {
+    case 'pending':
+      return { text: '💰 Prepayment Required', color: 'text-red-600 bg-red-50' };
+    case 'sent':
+      return { text: '📱 Bank Details Sent', color: 'text-orange-600 bg-orange-50' };
+    case 'confirmed':
+      return { text: '💰 PREPAID', color: 'text-green-600 bg-green-50' };
+    default:
+      return null;
+  }
+};
+
+const getActionButtons = (order: Order) => {
+  const risk = getRiskLevel(order.abandonmentCount, order.repeatCount, order.recoveryMode);
+  
+  if (order.abandonmentCount >= 3 && !order.recoveryMode) {
+    // EXTREME RISK - Prepayment Required
     return [
-      { text: 'EXTREME RISK', variant: 'destructive', disabled: true },
-      { text: 'Review', variant: 'outline' }
+      { text: '🔴 EXTREME RISK', variant: 'destructive', disabled: true },
+      { text: '💰 Prepayment Required', variant: 'outline' },
+      { text: '⏳ Awaiting Payment', variant: 'secondary' }
+    ];
+  } else if (order.recoveryMode && order.recoveryOrdersCompleted === 3) {
+    // Final Recovery Order
+    return [
+      { text: '🔴 RISK³', variant: 'destructive', disabled: true },
+      { text: '🎯 Final Recovery Order', variant: 'default' },
+      { text: '✅ Process Order', variant: 'default' }
+    ];
+  } else if (order.recoveryMode) {
+    // Recovery Mode
+    return [
+      { text: '🔴 RISK³', variant: 'destructive', disabled: true },
+      { text: '💰 PREPAID', variant: 'default' },
+      { text: '✅ Process Order', variant: 'default' }
     ];
   } else if (order.abandonmentCount === 2) {
     return [
-      { text: 'HIGH RISK', variant: 'destructive', disabled: true },
+      { text: '🚨 HIGH RISK', variant: 'destructive', disabled: true },
       { text: 'Verify', variant: 'outline' }
     ];
   } else if (order.abandonmentCount === 1) {
     return [
-      { text: 'CAUTION', variant: 'secondary', disabled: true },
+      { text: '⚠️ CAUTION', variant: 'secondary', disabled: true },
       { text: 'Next', variant: 'default' }
     ];
   } else {
     return [
-      { text: 'TRUSTED', variant: 'default', disabled: true },
+      { text: '✅ TRUSTED', variant: 'default', disabled: true },
       { text: 'Next', variant: 'default' }
     ];
   }
@@ -260,7 +441,9 @@ export function KanbanBoard() {
                 {/* Orders List */}
                 <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                   {getOrdersForColumn(column.id).map((order) => {
-                    const risk = getRiskLevel(order.abandonmentCount);
+                    const risk = getRiskLevel(order.abandonmentCount, order.repeatCount, order.recoveryMode);
+                    const repeat = getRepeatBadge(order.repeatCount);
+                    const prepayment = getPrepaymentStatus(order);
                     const actionButtons = getActionButtons(order);
                     
                     return (
@@ -320,6 +503,11 @@ export function KanbanBoard() {
                           <span className={risk.color}>
                             {risk.icon} {risk.level} {order.abandonmentCount > 0 && `(${order.abandonmentCount} abandoned orders)`}
                           </span>
+                          {order.recoveryMode && (
+                            <div className="text-xs text-slate-500 ml-6">
+                              Recovery: {order.recoveryOrdersCompleted}/3 completed
+                            </div>
+                          )}
                         </div>
 
                         {/* AI Assignment Status */}
@@ -341,7 +529,7 @@ export function KanbanBoard() {
                             <User className="w-4 h-4 text-purple-500" />
                             <span>
                               TS: {order.telesalesAssigned 
-                                ? `${order.agent} ${order.agentRating > 0 ? `⭐${order.agentRating}` : ''}`
+                                ? `${order.agent} ${order.agentRating > 0 ? `${order.agentRating}/5.0⭐` : ''}`
                                 : 'Pending approval'
                               }
                             </span>
@@ -353,51 +541,62 @@ export function KanbanBoard() {
                           </div>
                         </div>
 
-                        {/* Risk Badge */}
+                        {/* Risk & Repeat Badges */}
                         <div className="flex flex-wrap gap-1 mb-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${risk.color} ${risk.bgColor} border`}>
                             {risk.level}
                           </span>
+                          {repeat && (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${repeat.color} border`}>
+                              🔄 {repeat.text}
+                            </span>
+                          )}
+                          {prepayment && (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${prepayment.color} border`}>
+                              {prepayment.text}
+                            </span>
+                          )}
                           {order.labels.includes('hot') && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 animate-pulse">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 animate-pulse border border-red-200">
                               🔥 Hot
                             </span>
                           )}
-                          {order.labels.includes('repeat') && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                              🎯 Repeat
+                          {order.labels.includes('vip') && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                              💎 VIP
                             </span>
                           )}
                           {order.labels.includes('new') && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
                               ✨ New
+                            </span>
+                          )}
+                          {order.labels.includes('recovered') && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                              🎯 Recovered
                             </span>
                           )}
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant={actionButtons[0].variant as any}
-                            disabled={actionButtons[0].disabled}
-                            className="flex-1 text-xs"
-                          >
-                            {actionButtons[0].text}
-                          </Button>
+                        <div className="flex gap-2 flex-wrap">
+                          {actionButtons.map((button, index) => (
+                            <Button 
+                              key={index}
+                              size="sm" 
+                              variant={button.variant as any}
+                              disabled={button.disabled}
+                              className="text-xs flex-1 min-w-0"
+                            >
+                              {button.text}
+                            </Button>
+                          ))}
                           <Button 
                             size="sm" 
                             variant="outline" 
                             className="text-xs"
                           >
                             {getChatStatusIcon(order.chatStatus)}
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant={actionButtons[1].variant as any}
-                            className="text-xs"
-                          >
-                            {actionButtons[1].text}
                           </Button>
                         </div>
                       </div>
