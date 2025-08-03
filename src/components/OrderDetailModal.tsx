@@ -1,4 +1,3 @@
-
 import { X, Phone, MessageCircle, Mail, MapPin, Package, Clock, Star, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -15,6 +14,7 @@ interface Order {
   time: string;
   status: string;
   labels: string[];
+  state: string;
 }
 
 interface OrderDetailModalProps {
@@ -112,6 +112,10 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
                   <div>
                     <label className="text-sm text-slate-600">Phone</label>
                     <p className="font-semibold text-slate-800">{order.phone}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-600">State</label>
+                    <p className="font-semibold text-slate-800">📍 {order.state}</p>
                   </div>
                   <div>
                     <label className="text-sm text-slate-600">Source</label>

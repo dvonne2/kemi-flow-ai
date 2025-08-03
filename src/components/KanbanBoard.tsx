@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ interface Order {
   time: string;
   status: string;
   labels: string[];
+  state: string;
 }
 
 const columns = [
@@ -43,7 +43,8 @@ const sampleOrders: Order[] = [
     agentRating: 4.9,
     time: '11:46 AM',
     status: 'received',
-    labels: ['high-val', 'hot']
+    labels: ['high-val', 'hot'],
+    state: 'Lagos State'
   },
   {
     id: '2',
@@ -57,7 +58,8 @@ const sampleOrders: Order[] = [
     agentRating: 4.7,
     time: '10:22 AM',
     status: 'telesales',
-    labels: ['high-val', 'repeat-2']
+    labels: ['high-val', 'repeat-2'],
+    state: 'Abuja FCT'
   },
   {
     id: '3',
@@ -71,7 +73,8 @@ const sampleOrders: Order[] = [
     agentRating: 4.8,
     time: '09:15 AM',
     status: 'delivery',
-    labels: ['vip']
+    labels: ['vip'],
+    state: 'Rivers State'
   }
 ];
 
@@ -181,6 +184,13 @@ export function KanbanBoard() {
                             <Eye className="w-4 h-4 text-slate-500" />
                           </button>
                         </div>
+                      </div>
+
+                      {/* State Location */}
+                      <div className="text-sm text-slate-600 mb-2">
+                        <span className="flex items-center gap-1">
+                          📍 {order.state}
+                        </span>
                       </div>
 
                       {/* Phone & Time */}
