@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight } from 'lucide-react';
+
+import { useState, useEffect } from 'react';
+import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight, Clock, AlertTriangle, CheckCircle, XCircle, User, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrderModal } from '@/components/OrderModal';
@@ -19,6 +20,11 @@ interface Order {
   status: string;
   labels: string[];
   state: string;
+  abandonmentCount: number;
+  assignmentTime: number; // seconds since assignment
+  chatStatus: 'sending' | 'sent' | 'failed' | 'reply' | 'blocked';
+  assignmentReason: string;
+  telesalesAssigned: boolean;
 }
 
 const columns = [
@@ -39,12 +45,17 @@ const sampleOrders: Order[] = [
     product: 'SELF LOVE PLUS',
     quantity: 2,
     source: 'Facebook Ads',
-    agent: 'David',
-    agentRating: 4.9,
+    agent: 'Manual Review',
+    agentRating: 0,
     time: '11:46 AM',
     status: 'received',
-    labels: ['high-val', 'hot'],
-    state: 'Lagos State'
+    labels: ['extreme-risk'],
+    state: 'Lagos State',
+    abandonmentCount: 3,
+    assignmentTime: 35,
+    chatStatus: 'blocked',
+    assignmentReason: 'Manual review required',
+    telesalesAssigned: false
   },
   {
     id: '2',
@@ -58,11 +69,36 @@ const sampleOrders: Order[] = [
     agentRating: 4.7,
     time: '10:22 AM',
     status: 'telesales',
-    labels: ['high-val', 'repeat-2'],
-    state: 'Abuja FCT'
+    labels: ['high-risk', 'repeat'],
+    state: 'Abuja FCT',
+    abandonmentCount: 2,
+    assignmentTime: 18,
+    chatStatus: 'sent',
+    assignmentReason: 'High-value + beauty expertise',
+    telesalesAssigned: true
   },
   {
     id: '3',
+    customerName: 'Kemi Ibadan',
+    phone: '+234 801 234 5678',
+    amount: 45000,
+    product: 'Family Bundle',
+    quantity: 1,
+    source: 'WhatsApp',
+    agent: 'David',
+    agentRating: 4.9,
+    time: '09:15 AM',
+    status: 'telesales',
+    labels: ['caution', 'hot'],
+    state: 'Ogun State',
+    abandonmentCount: 1,
+    assignmentTime: 12,
+    chatStatus: 'sent',
+    assignmentReason: 'Available + new customer focus',
+    telesalesAssigned: true
+  },
+  {
+    id: '4',
     customerName: 'Emeka Okafor',
     phone: '+234 701 987 6543',
     amount: 25000,
@@ -71,32 +107,91 @@ const sampleOrders: Order[] = [
     source: 'WhatsApp',
     agent: 'Mike',
     agentRating: 4.8,
-    time: '09:15 AM',
+    time: '08:30 AM',
     status: 'delivery',
-    labels: ['vip'],
-    state: 'Rivers State'
+    labels: ['trusted', 'new'],
+    state: 'Rivers State',
+    abandonmentCount: 0,
+    assignmentTime: 8,
+    chatStatus: 'sent',
+    assignmentReason: 'Normal assignment',
+    telesalesAssigned: true
   }
 ];
 
-const getLabelStyle = (label: string) => {
-  const styles: { [key: string]: string } = {
-    'high-val': 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-2 py-1 rounded-full',
-    'repeat-2': 'bg-gradient-to-r from-blue-400 to-indigo-500 text-white text-xs px-2 py-1 rounded-full',
-    'repeat-3': 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs px-2 py-1 rounded-full',
-    'risk-2': 'bg-gradient-to-r from-red-400 to-red-500 text-white text-xs px-2 py-1 rounded-full',
-    'hot': 'bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full animate-pulse',
-    'vip': 'bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full'
-  };
-  return styles[label] || 'bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full';
+const getRiskLevel = (abandonmentCount: number) => {
+  if (abandonmentCount === 0) return { level: 'TRUSTED', icon: '✅', color: 'text-green-600 border-green-200', bgColor: 'bg-green-50' };
+  if (abandonmentCount === 1) return { level: 'RISK¹', icon: '⚠️', color: 'text-orange-600 border-orange-200', bgColor: 'bg-orange-50' };
+  if (abandonmentCount === 2) return { level: 'RISK²', icon: '🚨', color: 'text-red-600 border-red-200', bgColor: 'bg-red-50' };
+  return { level: 'RISK³⁺', icon: '🔴', color: 'text-red-800 border-red-300', bgColor: 'bg-red-100' };
+};
+
+const getChatStatusIcon = (status: string) => {
+  switch (status) {
+    case 'sending': return '⏳ Sending...';
+    case 'sent': return '✅ Sent';
+    case 'failed': return '❌ Failed';
+    case 'reply': return '📩 Reply Received';
+    case 'blocked': return '🚫 Blocked';
+    default: return '💬 Chat';
+  }
+};
+
+const getAssignmentTimerColor = (seconds: number) => {
+  if (seconds <= 15) return 'text-green-600';
+  if (seconds <= 25) return 'text-orange-600';
+  if (seconds <= 30) return 'text-red-600';
+  return 'text-red-800 animate-pulse';
+};
+
+const getActionButtons = (order: Order) => {
+  const risk = getRiskLevel(order.abandonmentCount);
+  
+  if (order.abandonmentCount >= 3) {
+    return [
+      { text: 'EXTREME RISK', variant: 'destructive', disabled: true },
+      { text: 'Review', variant: 'outline' }
+    ];
+  } else if (order.abandonmentCount === 2) {
+    return [
+      { text: 'HIGH RISK', variant: 'destructive', disabled: true },
+      { text: 'Verify', variant: 'outline' }
+    ];
+  } else if (order.abandonmentCount === 1) {
+    return [
+      { text: 'CAUTION', variant: 'secondary', disabled: true },
+      { text: 'Next', variant: 'default' }
+    ];
+  } else {
+    return [
+      { text: 'TRUSTED', variant: 'default', disabled: true },
+      { text: 'Next', variant: 'default' }
+    ];
+  }
 };
 
 export function KanbanBoard() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [orders, setOrders] = useState(sampleOrders);
+
+  // Simulate real-time timer updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setOrders(prevOrders => 
+        prevOrders.map(order => ({
+          ...order,
+          assignmentTime: order.assignmentTime + 1
+        }))
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getOrdersForColumn = (columnId: string) => {
-    return sampleOrders.filter(order => order.status === columnId);
+    return orders.filter(order => order.status === columnId);
   };
 
   const openOrderDetail = (order: Order) => {
@@ -110,9 +205,9 @@ export function KanbanBoard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Kanban Board
+              AI-Powered CRM Dashboard
             </h1>
-            <p className="text-slate-600 mt-1">AI-powered order workflow management</p>
+            <p className="text-slate-600 mt-1">Real-time risk assessment & telesales assignment</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -164,100 +259,150 @@ export function KanbanBoard() {
 
                 {/* Orders List */}
                 <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-                  {getOrdersForColumn(column.id).map((order) => (
-                    <div
-                      key={order.id}
-                      className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
-                    >
-                      {/* Customer Info & Amount */}
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-slate-800 truncate">{order.customerName}</h4>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-green-600">₦{order.amount.toLocaleString()}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openOrderDetail(order);
-                            }}
-                            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                  {getOrdersForColumn(column.id).map((order) => {
+                    const risk = getRiskLevel(order.abandonmentCount);
+                    const actionButtons = getActionButtons(order);
+                    
+                    return (
+                      <div
+                        key={order.id}
+                        className={`bg-white rounded-xl p-4 border-2 ${risk.color} shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer ${risk.bgColor}`}
+                      >
+                        {/* Customer Info & Amount */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{risk.icon}</span>
+                            <h4 className="font-semibold text-slate-800 truncate">{order.customerName}</h4>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-green-600">₦{order.amount.toLocaleString()}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openOrderDetail(order);
+                              }}
+                              className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <Eye className="w-4 h-4 text-slate-500" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* State Location */}
+                        <div className="text-sm text-slate-600 mb-2">
+                          <span className="flex items-center gap-1">
+                            📍 {order.state}
+                          </span>
+                        </div>
+
+                        {/* Phone & Product */}
+                        <div className="text-sm text-slate-600 mb-2">
+                          <span className="flex items-center gap-1">
+                            📱 {order.phone}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-slate-700 mb-2">
+                          <span className="flex items-center gap-1">
+                            🛍️ {order.product} • Qty: {order.quantity}
+                          </span>
+                        </div>
+
+                        {/* Source */}
+                        <div className="text-sm text-slate-600 mb-3">
+                          <span className="flex items-center gap-1">
+                            📱 {order.source}
+                          </span>
+                        </div>
+
+                        {/* Risk Level Display */}
+                        <div className="text-sm font-semibold mb-2">
+                          <span className={risk.color}>
+                            {risk.icon} {risk.level} {order.abandonmentCount > 0 && `(${order.abandonmentCount} abandoned orders)`}
+                          </span>
+                        </div>
+
+                        {/* AI Assignment Status */}
+                        <div className="text-sm text-slate-600 mb-2">
+                          <div className="flex items-center gap-2">
+                            <Bot className="w-4 h-4 text-indigo-500" />
+                            <span>AI Kemi: {order.telesalesAssigned ? 'Assigned ✅' : 'Manual Review'}</span>
+                          </div>
+                          {order.telesalesAssigned && (
+                            <div className="text-xs text-slate-500 ml-6">
+                              {order.assignmentReason}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Telesales Assignment */}
+                        <div className="text-sm text-slate-600 mb-3">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-purple-500" />
+                            <span>
+                              TS: {order.telesalesAssigned 
+                                ? `${order.agent} ${order.agentRating > 0 ? `⭐${order.agentRating}` : ''}`
+                                : 'Pending approval'
+                              }
+                            </span>
+                            {order.telesalesAssigned && (
+                              <span className={`text-xs ${getAssignmentTimerColor(order.assignmentTime)}`}>
+                                ({order.assignmentTime}s ago)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Risk Badge */}
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${risk.color} ${risk.bgColor} border`}>
+                            {risk.level}
+                          </span>
+                          {order.labels.includes('hot') && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 animate-pulse">
+                              🔥 Hot
+                            </span>
+                          )}
+                          {order.labels.includes('repeat') && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                              🎯 Repeat
+                            </span>
+                          )}
+                          {order.labels.includes('new') && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              ✨ New
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant={actionButtons[0].variant as any}
+                            disabled={actionButtons[0].disabled}
+                            className="flex-1 text-xs"
                           >
-                            <Eye className="w-4 h-4 text-slate-500" />
-                          </button>
+                            {actionButtons[0].text}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs"
+                          >
+                            {getChatStatusIcon(order.chatStatus)}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant={actionButtons[1].variant as any}
+                            className="text-xs"
+                          >
+                            {actionButtons[1].text}
+                          </Button>
                         </div>
                       </div>
-
-                      {/* State Location */}
-                      <div className="text-sm text-slate-600 mb-2">
-                        <span className="flex items-center gap-1">
-                          📍 {order.state}
-                        </span>
-                      </div>
-
-                      {/* Phone & Time */}
-                      <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
-                        <span className="flex items-center gap-1">
-                          📱 {order.phone}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          ⏰ {order.time}
-                        </span>
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="text-sm text-slate-700 mb-2">
-                        <span className="flex items-center gap-1">
-                          📦 {order.product} • Qty: {order.quantity}
-                        </span>
-                      </div>
-
-                      {/* Source */}
-                      <div className="text-sm text-slate-600 mb-3">
-                        <span className="flex items-center gap-1">
-                          🎯 {order.source}
-                        </span>
-                      </div>
-
-                      {/* Agent & AI Info */}
-                      <div className="flex items-center justify-between text-sm text-slate-600 mb-4">
-                        <span className="flex items-center gap-1">
-                          👤 AM: {order.agent}⭐{order.agentRating}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          🤖 Kemi ⚡
-                        </span>
-                      </div>
-
-                      {/* Labels */}
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {order.labels.map((label, index) => (
-                          <span key={index} className={getLabelStyle(label)}>
-                            {label === 'high-val' && '📊 High Val'}
-                            {label === 'repeat-2' && '🎯 Repeat²'}
-                            {label === 'repeat-3' && '🎯 Repeat³'}
-                            {label === 'risk-2' && '⚠️ Risk²'}
-                            {label === 'hot' && '🔥 Hot'}
-                            {label === 'vip' && '💎 VIP'}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1 text-xs">
-                          <Phone className="w-3 h-3 mr-1" />
-                          Call
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1 text-xs">
-                          <MessageCircle className="w-3 h-3 mr-1" />
-                          Chat
-                        </Button>
-                        <Button size="sm" className="flex-1 text-xs bg-gradient-to-r from-indigo-500 to-purple-600">
-                          <ArrowRight className="w-3 h-3 mr-1" />
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
