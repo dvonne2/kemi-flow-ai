@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight, Clock, AlertTriangle, CheckCircle, XCircle, User, Bot, CreditCard, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -578,30 +577,26 @@ export function KanbanBoard() {
                           )}
                         </div>
 
-                        {/* Action Buttons - Fixed Grouping */}
-                        <div className="space-y-2">
-                          <div className="flex gap-1 flex-wrap">
-                            {actionButtons.map((button, index) => (
-                              <Button 
-                                key={index}
-                                size="sm" 
-                                variant={button.variant as any}
-                                disabled={button.disabled}
-                                className="text-xs px-2 py-1 h-7 rounded-md"
-                              >
-                                {button.text}
-                              </Button>
-                            ))}
-                          </div>
-                          <div className="flex justify-center">
+                        {/* Action Buttons - With Chat Status Inline */}
+                        <div className="flex gap-1 flex-wrap">
+                          {actionButtons.map((button, index) => (
                             <Button 
+                              key={index}
                               size="sm" 
-                              variant="outline" 
-                              className="text-xs px-3 py-1 h-7 rounded-md border-slate-300 bg-white/80 hover:bg-slate-50"
+                              variant={button.variant as any}
+                              disabled={button.disabled}
+                              className="text-xs px-2 py-1 h-7 rounded-md"
                             >
-                              {getChatStatusIcon(order.chatStatus)}
+                              {button.text}
                             </Button>
-                          </div>
+                          ))}
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs px-3 py-1 h-7 rounded-md border-slate-300 bg-white/80 hover:bg-slate-50"
+                          >
+                            {getChatStatusIcon(order.chatStatus)}
+                          </Button>
                         </div>
                       </div>
                     );
