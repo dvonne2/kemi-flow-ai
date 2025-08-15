@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { KanbanBoard } from '@/components/KanbanBoard';
@@ -41,7 +40,7 @@ const Index = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-slate-50">
         <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-        <main className="flex-1 ml-16 md:ml-72 transition-all duration-300 overflow-hidden">
+        <main className="flex-1 ml-4 md:ml-76 transition-all duration-300 overflow-hidden">
           <div className="h-full">
             {renderActiveSection()}
           </div>
