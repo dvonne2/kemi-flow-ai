@@ -41,8 +41,10 @@ const Index = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-slate-50">
         <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-        <main className="flex-1 overflow-hidden">
-          {renderActiveSection()}
+        <main className="flex-1 ml-16 md:ml-72 transition-all duration-300 overflow-hidden">
+          <div className="h-full">
+            {renderActiveSection()}
+          </div>
         </main>
       </div>
     </SidebarProvider>

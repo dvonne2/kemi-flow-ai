@@ -43,7 +43,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
   const { open, toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar className={`${open ? 'w-72' : 'w-16'} transition-all duration-300 border-r border-slate-200 bg-white/80 backdrop-blur-xl`}>
+    <Sidebar className={`${open ? 'w-72' : 'w-16'} transition-all duration-300 border-r border-slate-200 bg-white/80 backdrop-blur-xl fixed left-0 top-0 h-full z-40`}>
       <div className="p-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
           {open && (
