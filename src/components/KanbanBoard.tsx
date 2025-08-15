@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight, Clock, AlertTriangle, CheckCircle, XCircle, User, Bot, CreditCard, DollarSign } from 'lucide-react';
+import { Plus, Filter, Search, Settings, Eye, Phone, MessageCircle, ArrowRight, Clock, AlertTriangle, CheckCircle, XCircle, User, Bot, CreditCard, DollarSign, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrderModal } from '@/components/OrderModal';
@@ -15,6 +15,8 @@ interface Order {
   source: string;
   agent: string;
   agentRating: number;
+  deliveryAgent?: string;
+  deliveryAgentRating?: number;
   time: string;
   status: string;
   labels: string[];
@@ -41,7 +43,6 @@ const columns = [
 ];
 
 const sampleOrders: Order[] = [
-  // EXTREME RISK - Requesting Prepayment
   {
     id: '1',
     customerName: 'Adebayo Johnson',
@@ -67,7 +68,6 @@ const sampleOrders: Order[] = [
     recoveryMode: false,
     recoveryOrdersCompleted: 0
   },
-  // EXTREME RISK - In Recovery Mode (REPEAT¹)
   {
     id: '2',
     customerName: 'Funmi Adebayo',
@@ -93,7 +93,6 @@ const sampleOrders: Order[] = [
     recoveryMode: true,
     recoveryOrdersCompleted: 1
   },
-  // RISK³ Customer Near Recovery (REPEAT³)
   {
     id: '3',
     customerName: 'Grace Okonkwo',
@@ -119,7 +118,6 @@ const sampleOrders: Order[] = [
     recoveryMode: true,
     recoveryOrdersCompleted: 3
   },
-  // HIGH RISK with REPEAT
   {
     id: '4',
     customerName: 'Fatima Abubakar',
@@ -145,7 +143,6 @@ const sampleOrders: Order[] = [
     recoveryMode: false,
     recoveryOrdersCompleted: 0
   },
-  // CAUTION with Hot label
   {
     id: '5',
     customerName: 'Kemi Ibadan',
@@ -171,7 +168,6 @@ const sampleOrders: Order[] = [
     recoveryMode: false,
     recoveryOrdersCompleted: 0
   },
-  // TRUSTED REPEAT Customer
   {
     id: '6',
     customerName: 'Mrs. Chioma Okeke',
@@ -182,6 +178,8 @@ const sampleOrders: Order[] = [
     source: 'WhatsApp',
     agent: 'Mike',
     agentRating: 4.8,
+    deliveryAgent: 'James Ojo',
+    deliveryAgentRating: 4.6,
     time: '08:45 AM',
     status: 'delivery',
     labels: ['trusted', 'repeat', 'vip'],
@@ -197,7 +195,6 @@ const sampleOrders: Order[] = [
     recoveryMode: false,
     recoveryOrdersCompleted: 0
   },
-  // TRUSTED NEW Customer
   {
     id: '7',
     customerName: 'Emeka Okafor',
@@ -208,6 +205,8 @@ const sampleOrders: Order[] = [
     source: 'WhatsApp',
     agent: 'Mike',
     agentRating: 4.8,
+    deliveryAgent: 'Adamu Hassan',
+    deliveryAgentRating: 4.4,
     time: '08:30 AM',
     status: 'delivery',
     labels: ['trusted', 'new'],
@@ -223,7 +222,6 @@ const sampleOrders: Order[] = [
     recoveryMode: false,
     recoveryOrdersCompleted: 0
   },
-  // Former RISK³ Customer Now TRUSTED (Recovery Complete)
   {
     id: '8',
     customerName: 'Blessing Nwosu',
@@ -248,6 +246,110 @@ const sampleOrders: Order[] = [
     prepaymentStatus: 'none',
     recoveryMode: false,
     recoveryOrdersCompleted: 3
+  },
+  {
+    id: '9',
+    customerName: 'Aminat Lawal',
+    phone: '+234 802 345 6789',
+    amount: 42000,
+    product: 'Premium Hair Kit',
+    quantity: 1,
+    source: 'WhatsApp',
+    agent: 'Sarah',
+    agentRating: 4.7,
+    deliveryAgent: 'Musa Ibrahim',
+    deliveryAgentRating: 4.8,
+    time: '07:30 AM',
+    status: 'delivered',
+    labels: ['trusted', 'repeat'],
+    state: 'Kano State',
+    abandonmentCount: 0,
+    repeatCount: 2,
+    assignmentTime: 180,
+    chatStatus: 'sent',
+    assignmentReason: 'Successfully delivered',
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
+  },
+  {
+    id: '10',
+    customerName: 'Tunde Adebayo',
+    phone: '+234 706 123 4567',
+    amount: 67500,
+    product: 'Family Bundle Plus',
+    quantity: 1,
+    source: 'Instagram',
+    agent: 'Mike',
+    agentRating: 4.8,
+    deliveryAgent: 'Peter Nkem',
+    deliveryAgentRating: 4.9,
+    time: '06:45 AM',
+    status: 'delivered',
+    labels: ['trusted', 'vip'],
+    state: 'Lagos State',
+    abandonmentCount: 0,
+    repeatCount: 7,
+    assignmentTime: 240,
+    chatStatus: 'sent',
+    assignmentReason: 'VIP delivery completed',
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
+  },
+  {
+    id: '11',
+    customerName: 'Ibrahim Sani',
+    phone: '+234 805 987 6543',
+    amount: 29500,
+    product: 'Basic Kit',
+    quantity: 1,
+    source: 'Facebook Ads',
+    agent: 'David',
+    agentRating: 4.9,
+    time: '12:15 PM',
+    status: 'cancelled',
+    labels: ['high-risk'],
+    state: 'Kaduna State',
+    abandonmentCount: 2,
+    repeatCount: 0,
+    assignmentTime: 85,
+    chatStatus: 'failed',
+    assignmentReason: 'Customer unreachable',
+    telesalesAssigned: true,
+    prepaymentRequired: false,
+    prepaymentStatus: 'none',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
+  },
+  {
+    id: '12',
+    customerName: 'Folake Ogundipe',
+    phone: '+234 801 456 7890',
+    amount: 54000,
+    product: 'Beauty Complete Set',
+    quantity: 1,
+    source: 'WhatsApp',
+    agent: 'Sarah',
+    agentRating: 4.7,
+    time: '11:30 AM',
+    status: 'cancelled',
+    labels: ['extreme-risk'],
+    state: 'Oyo State',
+    abandonmentCount: 4,
+    repeatCount: 1,
+    assignmentTime: 120,
+    chatStatus: 'blocked',
+    assignmentReason: 'Customer requested cancellation',
+    telesalesAssigned: true,
+    prepaymentRequired: true,
+    prepaymentStatus: 'pending',
+    recoveryMode: false,
+    recoveryOrdersCompleted: 0
   }
 ];
 
@@ -539,6 +641,18 @@ export function KanbanBoard() {
                             )}
                           </div>
                         </div>
+
+                        {/* Delivery Agent Assignment - Show only for delivery status */}
+                        {order.status === 'delivery' && order.deliveryAgent && (
+                          <div className="text-sm text-slate-600 mb-3">
+                            <div className="flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-green-500" />
+                              <span>
+                                Delivery: {order.deliveryAgent} {order.deliveryAgentRating ? `${order.deliveryAgentRating}/5.0⭐` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Risk & Repeat Badges */}
                         <div className="flex flex-wrap gap-1 mb-3">
